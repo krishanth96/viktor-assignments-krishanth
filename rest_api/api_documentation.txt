@@ -1,0 +1,294 @@
+VIKTOR Backend Assignment – API Design
+====================================
+
+====================================
+Base URL
+====================================
+https://api.digital-library.com/v1
+
+
+====================================
+1. Create a book
+====================================
+
+POST /books/
+Create a new book record.
+
+Request body (JSON):
+{
+  "name": "The Lord of the Rings",
+  "author": "J.R.R. Tolkien",
+  "publisher": "Allen & Unwin",
+  "publicationDate": "1954-07-29",
+  "ISBN": "9780261102385",
+  "coverPhoto": "https://example.com/covers/lotr.jpg"
+}
+
+Notes:
+- coverPhoto can be a URL or a file reference ID (from an upload system).
+- publicationDate is in ISO format YYYY-MM-DD.
+
+Responses:
+201 Created - Book was successfully created.
+
+Response body (JSON):
+{
+  "id": 1,
+  "name": "The Lord of the Rings",
+  "author": "J.R.R. Tolkien",
+  "publisher": "Allen & Unwin",
+  "publicationDate": "1954-07-29",
+  "ISBN": "9780261102385",
+  "coverPhoto": "https://example.com/covers/lotr.jpg",
+  "contentsFile": null,
+  "processingStatus": "NOT_STARTED",
+  "createdAt": "2025-11-14T12:00:00Z",
+  "updatedAt": "2025-11-14T12:00:00Z"
+}
+
+400 Bad Request - Missing or Invalid fields
+
+
+====================================
+2. Retrieve a single book
+====================================
+
+GET /books/{id}/
+Returns details of a specific book by ID
+
+Path parameters:
+- id: integer
+
+Responses:
+200 OK
+Response body (JSON):
+{
+  "id": 1,
+  "name": "The Lord of the Rings",
+  "author": "J.R.R. Tolkien",
+  "publisher": "Allen & Unwin",
+  "publicationDate": "1954-07-29",
+  "ISBN": "9780261102385",
+  "coverPhoto": "https://example.com/covers/lotr.jpg",
+  "contentsFile": "file_12345",
+  "processingStatus": "COMPLETED",
+  "createdAt": "2025-11-14T12:00:00Z",
+  "updatedAt": "2025-11-14T12:30:00Z"
+}
+
+404 Not Found - No results found with this ID.
+
+
+====================================
+3. Update a book’s coverPhoto
+====================================
+
+PATCH /books/{id}/cover-photo/
+Update only the coverPhoto of a book by given ID.
+
+Path parameters:
+- id: integer
+
+Request body (JSON):
+{
+  "coverPhoto": "https://example.com/covers/lotr-new.jpg"
+}
+
+Responses:
+200 OK - Book cover was successfully updated.
+
+Response body (JSON):
+{
+  "id": 1,
+  "name": "The Lord of the Rings",
+  "author": "J.R.R. Tolkien",
+  "publisher": "Allen & Unwin",
+  "publicationDate": "1954-07-29",
+  "ISBN": "9780261102385",
+  "coverPhoto": "https://example.com/covers/lotr-new.jpg",
+  "contentsFile": "file_12345",
+  "processingStatus": "COMPLETED",
+  "createdAt": "2025-11-14T12:00:00Z",
+  "updatedAt": "2025-11-14T13:00:00Z"
+}
+
+400 Bad Request - Invalid URL or invalid payload
+404 Not Found - Book not found
+
+
+====================================
+4. List books with pagination, filtering, and sorting
+====================================
+
+GET /books/
+List all books with support for:
+- pagination
+- filtering (single or multiple fields)
+- sorting (single or multiple fields, asc/desc)
+
+Query parameters (all optional):
+
+Pagination:
+- page: integer, default 1
+- pageSize: integer, default 20
+
+Filtering (examples):
+- name: filter by book name
+- author: filter by author
+- publisher: filter by publisher
+- isbn: filter by ISBN
+- publicationDateFrom: only books published on or after this date (YYYY-MM-DD)
+- publicationDateTo: only books published on or before this date (YYYY-MM-DD)
+
+Examples:
+- /books/?author=J.R.R.%20Tolkien
+- /books/?publisher=Allen%20%26%20Unwin&publicationDateFrom=1950-01-01
+
+Sorting:
+- sort: comma-separated list of fields.
+  - Use field name for ascending
+  - Use -field name for descending
+
+Examples:
+- sort=name  (sort by name ascending)
+- sort=-publicationDate  (sort by publication date descending)
+- sort=author,-publicationDate (sort by author asc, then publication date desc)
+
+Full example:
+GET /books/?author=J.R.R.%20Tolkien&sort=-publicationDate&page=1&pageSize=10
+
+Responses:
+200 OK
+Response body (JSON):
+{
+  "page": 1,
+  "pageSize": 10,
+  "totalItems": 2,
+  "totalPages": 1,
+  "items": [
+    {
+      "id": 1,
+      "name": "The Lord of the Rings",
+      "author": "J.R.R. Tolkien",
+      "publisher": "Allen & Unwin",
+      "publicationDate": "1954-07-29",
+      "ISBN": "9780261102385",
+      "coverPhoto": "https://example.com/covers/lotr.jpg",
+      "contentsFile": "file_12345",
+      "processingStatus": "COMPLETED",
+      "createdAt": "2025-11-14T12:00:00Z",
+      "updatedAt": "2025-11-14T12:30:00Z"
+    },
+    {
+      "id": 2,
+      "name": "The Hobbit",
+      "author": "J.R.R. Tolkien",
+      "publisher": "Allen & Unwin",
+      "publicationDate": "1937-09-21",
+      "ISBN": "9780261102217",
+      "coverPhoto": "https://example.com/covers/hobbit.jpg",
+      "contentsFile": "file_67890",
+      "processingStatus": "NOT_STARTED",
+      "createdAt": "2025-11-14T13:00:00Z",
+      "updatedAt": "2025-11-14T13:00:00Z"
+    }
+  ]
+}
+
+400 Bad Request - Invalid pagination or sorting format
+
+
+====================================
+5. Upload a book’s contents as a file
+====================================
+
+POST /books/{id}/contents/
+Upload the contents file for a book (e.g. PDF, EPUB, TXT).
+
+Path parameters:
+- id: integer, the ID of the book
+
+Request:
+Content-Type: multipart/form-data
+
+Form fields:
+- file: the book file
+
+Example:
+- file: "lotr.pdf"
+
+Responses:
+201 Created
+File was successfully uploaded and linked to the book.
+
+Response body (JSON):
+{
+  "id": 1,
+  "contentsFile": "file_12345",
+  "message": "Contents file uploaded successfully."
+}
+
+400 Bad Request
+- No file provided
+- Unsupported file type
+
+404 Not Found
+- Book not found
+
+
+====================================
+6. Start processing a book (asynchronous, non-blocking)
+====================================
+
+Processing the book can take some time, so this endpoint triggers it in the background.
+
+POST /books/{id}/process/
+Start the processing job.
+
+Path parameters:
+- id: integer
+
+Request body:
+- Optional
+
+Responses:
+202 Accepted - Processing has started in the background.
+
+Response body (JSON):
+{
+  "jobId": "proc_abc123",
+  "bookId": 1,
+  "status": "IN_PROGRESS",
+  "message": "Processing started."
+}
+
+400 Bad Request - No contents uploaded yet or processing already running
+404 Not Found - Book not found
+
+
+====================================
+7. Check processing status for a job
+====================================
+
+GET /processing-jobs/{jobId}/
+Get the status of a processing job.
+
+Path parameters:
+- jobId: string
+
+Responses:
+200 OK
+Response body (JSON):
+{
+  "jobId": "proc_abc123",
+  "bookId": 1,
+  "status": "COMPLETED",    // or "IN_PROGRESS", "FAILED"
+  "startedAt": "2025-11-14T12:05:00Z",
+  "finishedAt": "2025-11-14T12:10:00Z",
+  "resultLocation": "https://example.com/results/proc_abc123.json",
+  "errorMessage": null
+}
+
+404 Not Found
+- No job found with this ID
+
